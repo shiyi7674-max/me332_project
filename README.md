@@ -17,9 +17,9 @@ sudo apt install ros-humble-navigation2 ros-humble-nav2-bringup ros-humble-slam-
 
 # 安装机械臂控制库
 sudo apt install ros-humble-moveit ros-humble-ros2-control ros-humble-ros2-controllers
-🚀 2. 如何运行 (How to Run)
+🚀 **2. 如何运行 (How to Run)**
 
-2.1 首次下载与编译
+**2.1 首次下载与编译**
 
 Bash
 
@@ -37,7 +37,7 @@ colcon build --packages-select my_robot_description
 # 4. 刷新环境
 source install/setup.bash
 
-📏 3. 硬件规格标准 (严格遵守!)
+**📏 3. 硬件规格标准 (严格遵守!)**
 
 为了防止模型合体时散架，请大家建模时严格遵守以下尺寸：
 
@@ -71,7 +71,7 @@ Bash
 cd ~/me332_ws/src/me332_project
 git pull
 
-📤 提交代码三部曲
+**📤 提交代码三部曲**
 
 写完代码后，按顺序执行：
 Bash
