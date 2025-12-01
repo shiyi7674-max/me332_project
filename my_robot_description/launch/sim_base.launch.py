@@ -39,6 +39,15 @@ def generate_launch_description():
                    '-z', '0.1'], # 稍微抬高一点防止卡地里
         output='screen'
     )
+    
+    joint_state_publisher_gui = Node(
+        package='joint_state_publisher_gui',
+        executable='joint_state_publisher_gui',
+        name='joint_state_publisher_gui',
+        output='screen'
+    )
+
+  
 
     # 4. 关键：ROS-Gazebo 桥接 (Bridge)
     # 将 Gazebo 的 /cmd_vel, /odom, /tf 转换成 ROS 2 标准话题
@@ -60,4 +69,5 @@ def generate_launch_description():
         gazebo,
         spawn_entity,
         #bridge,
+        joint_state_publisher_gui, 
     ])

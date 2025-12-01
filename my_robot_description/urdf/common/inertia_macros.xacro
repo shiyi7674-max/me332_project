@@ -21,4 +21,15 @@
         </inertial>
     </xacro:macro>
 
+    <!-- 添加长方体惯性宏 -->
+    <xacro:macro name="box_inertia" params="m x y z">
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <mass value="${m}" />
+            <inertia ixx="${(m/12) * (y*y + z*z)}" ixy="0" ixz="0"
+                     iyy="${(m/12) * (x*x + z*z)}" iyz="0"
+                     izz="${(m/12) * (x*x + y*y)}" />
+        </inertial>
+    </xacro:macro>
+
 </robot>
