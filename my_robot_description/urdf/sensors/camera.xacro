@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ==================== 深度相机 ==================== -->
+
+  <xacro:macro name="depth_camera" params="prefix:='camera'">
+
+    <!-- 相机连杆 -->
+    <link name="${prefix}_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.05 0.05 0.05"/>
+        </geometry>
+        <material name="black"/>  <!-- 改为黑色 -->
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.05 0.05 0.05"/>
+        </geometry>
+      </collision>
+      <xacro:box_inertia m="0.05" x="0.05" y="0.05" z="0.05"/>
+    </link>
+
+    <!-- 关节 - 安装在底盘前方 -->
+    <joint name="${prefix}_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="${prefix}_link"/>
+      <origin xyz="0.12 0 0.15" rpy="0 0.3 0"/>  <!-- 稍微倾斜向下 -->
+    </joint>
+
+    <!-- Gazebo 插件：深度相机 -->
+    <gazebo reference="${prefix}_link">
+      <material>Gazebo/Black</material>
+      <sensor name="${prefix}" type="camera">
+        <camera>
+          <horizontal_fov>1.0472</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>10.0</far>
+          </clip>
+        </camera>
+        <always_on>true</always_on>
+        <update_rate>30.0</update_rate>
+        <plugin filename="libignition-gazebo-camera-system.so"
+                name="ignition::gazebo::systems::Camera">
+          <topic>${prefix}/image_raw</topic>
+          <frame_id>${prefix}_link</frame_id>
+        </plugin>
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>

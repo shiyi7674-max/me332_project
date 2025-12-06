@@ -1,0 +1,105 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ==================== 夹爪 ==================== -->
+
+  <xacro:macro name="simple_gripper" params="prefix:='gripper' parent_link">
+
+    <!-- 夹爪基座 -->
+    <link name="${prefix}_base_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.03 0.05 0.03"/>
+        </geometry>
+        <material name="gripper_yellow"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.03 0.05 0.03"/>
+        </geometry>
+      </collision>
+      <xacro:box_inertia m="0.05" x="0.03" y="0.05" z="0.03"/>
+    </link>
+
+    <!-- 左夹爪 -->
+    <link name="${prefix}_left_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.02 0.03 0.04"/>
+        </geometry>
+        <material name="gripper_yellow"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.02 0.03 0.04"/>
+        </geometry>
+      </collision>
+      <xacro:box_inertia m="0.02" x="0.02" y="0.03" z="0.04"/>
+    </link>
+
+    <!-- 右夹爪 -->
+    <link name="${prefix}_right_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.02 0.03 0.04"/>
+        </geometry>
+        <material name="gripper_yellow"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.02 0.03 0.04"/>
+        </geometry>
+      </collision>
+      <xacro:box_inertia m="0.02" x="0.02" y="0.03" z="0.04"/>
+    </link>
+
+    <!-- 关节：基座 -->
+    <joint name="${prefix}_base_joint" type="fixed">
+      <parent link="${parent_link}"/>
+      <child link="${prefix}_base_link"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <!-- 关节：左夹爪（平移关节） -->
+    <joint name="${prefix}_left_joint" type="prismatic">
+      <parent link="${prefix}_base_link"/>
+      <child link="${prefix}_left_link"/>
+      <origin xyz="0 0.03 0" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit effort="10" velocity="0.1" lower="-0.03" upper="0"/>
+    </joint>
+
+    <!-- 关节：右夹爪（平移关节） -->
+    <joint name="${prefix}_right_joint" type="prismatic">
+      <parent link="${prefix}_base_link"/>
+      <child link="${prefix}_right_link"/>
+      <origin xyz="0 -0.03 0" rpy="0 0 0"/>
+      <axis xyz="0 -1 0"/>
+      <limit effort="10" velocity="0.1" lower="-0.03" upper="0"/>
+    </joint>
+
+    <!-- Gazebo 插件：夹爪摩擦力设置 -->
+    <gazebo reference="${prefix}_left_link">
+      <material>Gazebo/Yellow</material>
+      <mu1>100.0</mu1>
+      <mu2>100.0</mu2>
+      <kp>1000000.0</kp>
+      <kd>1.0</kd>
+    </gazebo>
+    <gazebo reference="${prefix}_right_link">
+      <material>Gazebo/Yellow</material>
+      <mu1>100.0</mu1>
+      <mu2>100.0</mu2>
+      <kp>1000000.0</kp>
+      <kd>1.0</kd>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>
