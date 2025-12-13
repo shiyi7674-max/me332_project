@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<robot name="my_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ==================== 引入通用宏 ==================== -->
+  <xacro:include filename="$(find my_robot_description)/urdf/common/materials.xacro"/>
+  <xacro:include filename="$(find my_robot_description)/urdf/common/inertia_macros.xacro"/>
+
+  <!-- ==================== 引入模块 ==================== -->
+  <!-- 底盘 -->
+  <xacro:include filename="$(find my_robot_description)/urdf/base/mobile_base.xacro"/>
+  <!-- 机械臂 -->
+  <xacro:include filename="$(find my_robot_description)/urdf/arm/simple_arm.xacro"/>
+  <!-- 传感器 -->
+  <xacro:include filename="$(find my_robot_description)/urdf/sensors/lidar.xacro"/>
+  <xacro:include filename="$(find my_robot_description)/urdf/sensors/camera.xacro"/>
+  <xacro:include filename="$(find my_robot_description)/urdf/sensors/gripper.xacro"/>
+  <!-- Gazebo 插件 -->
+  <xacro:include filename="$(find my_robot_description)/urdf/base/mobile_base_gazebo.xacro"/>
+  <xacro:include filename="$(find my_robot_description)/urdf/arm/simple_arm_gazebo.xacro"/>
+
+  <!-- ==================== 机器人总装 ==================== -->
+
+  <!-- 1. 底盘 -->
+  <xacro:mobile_base/>
+
+  <!-- 2. 机械臂（安装在底盘上） -->
+  <xacro:simple_arm prefix="arm_"/>
+
+  <!-- 3. 传感器 -->
+  <xacro:lidar_sensor prefix="lidar"/>
+  <xacro:depth_camera prefix="camera"/>
+
+  <!-- 4. 夹爪（安装在机械臂末端） -->
+  <xacro:simple_gripper prefix="gripper" parent_link="arm_gripper_link"/>
+
+</robot>

@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<robot name="test_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:include filename="common/inertia_macros.xacro" />
+    <xacro:include filename="base/mobile_base.xacro" />
+    <xacro:include filename="base/mobile_base_gazebo.xacro" />
+    <xacro:include filename="arm/simple_arm.xacro" />
+    <xacro:include filename="arm/simple_arm_gazebo.xacro" />
+
+    <xacro:mobile_base />
+    <xacro:mobile_base_gazebo_plugin />
+    <xacro:simple_arm prefix="arm_" />
+    <xacro:simple_arm_gazebo_plugin prefix="arm_" />
+</robot>

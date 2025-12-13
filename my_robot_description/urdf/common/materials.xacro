@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ==================== 材料定义 ==================== -->
+  
+  <!-- 与底盘一致的蓝色 -->
+  <material name="blue">
+    <color rgba="0.0 0.0 1.0 1.0"/>
+  </material>
+
+  <!-- 与底盘一致的黑色 -->
+  <material name="black">
+    <color rgba="0.0 0.0 0.0 1.0"/>
+  </material>
+
+  <!-- 机械臂颜色 -->
+  <material name="arm_blue">
+    <color rgba="0.1 0.3 0.8 1.0"/>
+  </material>
+
+  <!-- 传感器颜色 -->
+  <material name="sensor_red">
+    <color rgba="0.9 0.1 0.1 1.0"/>
+  </material>
+
+  <!-- 夹爪颜色 -->
+  <material name="gripper_yellow">
+    <color rgba="0.9 0.9 0.1 1.0"/>
+  </material>
+
+</robot>

@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="simple_arm_gazebo_plugin" params="prefix:='arm_'">
+
+    <!-- 机械臂材质 -->
+    <gazebo reference="${prefix}base_link">
+      <material>Gazebo/DarkGray</material>
+    </gazebo>
+
+    <gazebo reference="${prefix}link1">
+      <material>Gazebo/Silver</material>
+    </gazebo>
+
+    <gazebo reference="${prefix}link2">
+      <material>Gazebo/Silver</material>
+    </gazebo>
+
+    <gazebo reference="${prefix}link3">
+      <material>Gazebo/Silver</material>
+    </gazebo>
+
+    <gazebo reference="${prefix}gripper_link">
+      <material>Gazebo/DarkGray</material>
+    </gazebo>
+
+    <!-- 机械臂控制器插件 -->
+    <!-- Ignition Gazebo 关节位置控制器 -->
+    <gazebo>
+      <plugin filename="gz-sim-joint-position-controller-system" 
+              name="gz::sim::systems::JointPositionController">
+        <joint_name>${prefix}shoulder_pan_joint</joint_name>
+        <topic>${prefix}shoulder_pan_joint/cmd_pos</topic>
+      </plugin>
+    </gazebo>
+
+    <gazebo>
+      <plugin filename="gz-sim-joint-position-controller-system" 
+              name="gz::sim::systems::JointPositionController">
+        <joint_name>${prefix}shoulder_pitch_joint</joint_name>
+        <topic>${prefix}shoulder_pitch_joint/cmd_pos</topic>
+      </plugin>
+    </gazebo>
+
+    <gazebo>
+      <plugin filename="gz-sim-joint-position-controller-system" 
+              name="gz::sim::systems::JointPositionController">
+        <joint_name>${prefix}elbow_pitch_joint</joint_name>
+        <topic>${prefix}elbow_pitch_joint/cmd_pos</topic>
+      </plugin>
+    </gazebo>
+
+    <!-- 每个关节的传动配置 -->
+    <transmission name="${prefix}shoulder_pan_tran">
+      <type>transmission_interface/SimpleTransmission</type>
+      <joint name="${prefix}shoulder_pan_joint">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+      </joint>
+      <actuator name="${prefix}shoulder_pan_motor">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission>
+
+    <transmission name="${prefix}shoulder_pitch_tran">
+      <type>transmission_interface/SimpleTransmission</type>
+      <joint name="${prefix}shoulder_pitch_joint">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+      </joint>
+      <actuator name="${prefix}shoulder_pitch_motor">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission>
+
+    <transmission name="${prefix}elbow_pitch_tran">
+      <type>transmission_interface/SimpleTransmission</type>
+      <joint name="${prefix}elbow_pitch_joint">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+      </joint>
+      <actuator name="${prefix}elbow_pitch_motor">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission>
+
+  </xacro:macro>
+
+</robot>
