@@ -14,6 +14,7 @@
   <xacro:include filename="$(find my_robot_description)/urdf/sensors/lidar.xacro"/>
   <xacro:include filename="$(find my_robot_description)/urdf/sensors/camera.xacro"/>
   <xacro:include filename="$(find my_robot_description)/urdf/sensors/gripper.xacro"/>
+  <xacro:include filename="$(find my_robot_description)/urdf/sensors/imu.xacro"/>
   <!-- Gazebo 插件 -->
   <xacro:include filename="$(find my_robot_description)/urdf/base/mobile_base_gazebo.xacro"/>
   <xacro:include filename="$(find my_robot_description)/urdf/arm/simple_arm_gazebo.xacro"/>
@@ -29,8 +30,11 @@
   <!-- 3. 传感器 -->
   <xacro:lidar_sensor prefix="lidar"/>
   <xacro:depth_camera prefix="camera"/>
+  <xacro:imu_sensor prefix="imu"/>
 
   <!-- 4. 夹爪（安装在机械臂末端） -->
   <xacro:simple_gripper prefix="gripper" parent_link="arm_gripper_link"/>
+  
+  <xacro:mobile_base_gazebo_plugin />
 
 </robot>
