@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>my_robot_app</name>
+  <version>0.1.0</version>
+  <description>AI交互节点 - 语音和手势控制</description>
+  <maintainer email="m3@team.com">M3</maintainer>
+  <license>MIT</license>
+
+  <!-- 关键：对于纯Python包，只需要这个 -->
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  
+  <!-- 可选测试依赖 -->
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <!-- 关键：必须是 ament_python -->
+    <build_type>ament_python</build_type>
+  </export>
+</package>
