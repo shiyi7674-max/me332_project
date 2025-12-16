@@ -1,287 +1,276 @@
 # my_robot_app/modules/ai_detector.py
 """
-AI检测器类 - 语音识别和手势识别的核心实现
+AI检测器类 - 语音和手势识别的核心实现
+作为语音和手势节点的上层协调器
 """
 
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
-import threading
-import numpy as np
+import time
 from enum import Enum
 
-class VoiceCommand(Enum):
-    """语音命令枚举"""
-    GO_FORWARD = "前进"
-    GO_BACKWARD = "后退"
-    TURN_LEFT = "左转"
-    TURN_RIGHT = "右转"
-    PICK_UP = "抓取"
-    PUT_DOWN = "放下"
-    STOP = "停止"
-
-class GestureCommand(Enum):
-    """手势命令枚举"""
-    MOVE_FORWARD = "forward"
-    MOVE_BACKWARD = "backward"
-    TURN_LEFT = "left"
-    TURN_RIGHT = "right"
-    GRAB = "grab"
-    RELEASE = "release"
-    STOP = "stop"
+class ControlMode(Enum):
+    """控制模式枚举"""
+    VOICE_ONLY = "voice_only"
+    GESTURE_ONLY = "gesture_only" 
+    BOTH = "both"
+    FUSED = "fused"
 
 class AIDetector(Node):
     """
-    AI检测器类，负责语音和手势识别
+    AI检测器类，负责协调语音和手势控制
     
     功能：
-    1. 语音识别：通过麦克风输入控制机器人
-    2. 手势识别：通过摄像头识别手势控制
-    3. 命令融合：优先级处理和冲突解决
+    1. 接收语音和手势命令
+    2. 命令融合和优先级处理
+    3. 发布统一控制命令
+    4. 状态管理和冲突解决
     """
     
     def __init__(self):
         super().__init__('ai_detector')
         
         # 参数设置
-        self.declare_parameter('enable_voice', True)
-        self.declare_parameter('enable_gesture', True)
-        self.declare_parameter('control_mode', 'both')  # 'voice', 'gesture', 'both'
+        self.declare_parameter('control_mode', 'both')  # 'voice_only', 'gesture_only', 'both', 'fused'
+        self.declare_parameter('voice_priority', 0.7)   # 语音命令优先级权重
+        self.declare_parameter('gesture_priority', 0.3) # 手势命令优先级权重
+        self.declare_parameter('timeout', 2.0)         # 命令超时时间（秒）
+        self.declare_parameter('enable_fusion', True)  # 是否启用命令融合
         
-        self.enable_voice = self.get_parameter('enable_voice').value
-        self.enable_gesture = self.get_parameter('enable_gesture').value
         self.control_mode = self.get_parameter('control_mode').value
+        self.voice_priority = self.get_parameter('voice_priority').value
+        self.gesture_priority = self.get_parameter('gesture_priority').value
+        self.timeout = self.get_parameter('timeout').value
+        self.enable_fusion = self.get_parameter('enable_fusion').value
         
-        # 发布者 - 发布AI识别的命令
-        self.voice_cmd_pub = self.create_publisher(String, '/voice_command', 10)
-        self.gesture_cmd_pub = self.create_publisher(String, '/gesture_command', 10)
+        # 发布者 - 发布融合后的控制命令
         self.fused_cmd_pub = self.create_publisher(Twist, '/cmd_vel_ai', 10)
+        self.fused_action_pub = self.create_publisher(String, '/ai_action', 10)
+        self.status_pub = self.create_publisher(String, '/ai_status', 10)
         
-        # 订阅者 - 接收其他节点的状态
-        self.robot_status = "idle"
+        # 订阅者 - 接收语音和手势命令
+        self.voice_sub = self.create_subscription(
+            String,
+            '/voice_control',
+            self.voice_callback,
+            10
+        )
         
-        # AI模型初始化标志
-        self.voice_model_loaded = False
-        self.gesture_model_loaded = False
+        self.gesture_sub = self.create_subscription(
+            String,
+            '/gesture_control',
+            self.gesture_callback,
+            10
+        )
         
-        # 语音识别相关
-        self.voice_thread = None
-        self.is_listening = False
+        # 状态变量
+        self.last_voice_command = None
+        self.last_voice_time = 0
+        self.last_gesture_command = None
+        self.last_gesture_time = 0
+        self.current_action = None
         
-        # 手势识别相关
-        self.gesture_thread = None
-        self.is_tracking = False
+        # 命令映射
+        self.command_velocity_map = {
+            'move_forward': (0.2, 0.0),
+            'move_backward': (-0.15, 0.0),
+            'turn_left': (0.0, 0.5),
+            'turn_right': (0.0, -0.5),
+            'stop': (0.0, 0.0),
+        }
         
-        self.get_logger().info(f"AI检测器初始化完成 [语音: {self.enable_voice}, 手势: {self.enable_gesture}]")
+        # 定时器
+        self.fusion_timer = self.create_timer(0.1, self.fusion_callback)  # 10Hz融合频率
+        self.status_timer = self.create_timer(2.0, self.status_callback)   # 状态发布
         
-        # 加载AI模型（模拟）
-        self._load_models()
+        self.get_logger().info(f"AI检测器初始化完成 [模式: {self.control_mode}]")
+        self.get_logger().info(f"命令融合: {'启用' if self.enable_fusion else '禁用'}")
+        self.get_logger().info(f"语音优先级: {self.voice_priority}, 手势优先级: {self.gesture_priority}")
     
-    def _load_models(self):
-        """加载语音和手势识别模型（模拟实现）"""
-        try:
-            if self.enable_voice:
-                # 这里应该是真实的语音识别模型加载
-                # 例如：import speech_recognition as sr
-                self.get_logger().info("语音识别模型加载中...")
-                # 模拟加载过程
-                self.voice_model_loaded = True
-                self.get_logger().info("语音识别模型加载完成")
-            
-            if self.enable_gesture:
-                # 这里应该是真实的手势识别模型加载
-                # 例如：import mediapipe as mp
-                self.get_logger().info("手势识别模型加载中...")
-                # 模拟加载过程
-                self.gesture_model_loaded = True
-                self.get_logger().info("手势识别模型加载完成")
-                
-        except Exception as e:
-            self.get_logger().error(f"模型加载失败: {str(e)}")
+    def voice_callback(self, msg):
+        """语音命令回调"""
+        command = msg.data
+        current_time = time.time()
+        
+        self.get_logger().info(f"收到语音命令: {command}")
+        
+        # 更新语音命令状态
+        self.last_voice_command = command
+        self.last_voice_time = current_time
+        
+        # 如果模式是纯语音，立即执行
+        if self.control_mode in ['voice_only', 'both']:
+            self._execute_command(command, 'voice')
     
-    def start_voice_recognition(self):
-        """启动语音识别线程"""
-        if not self.enable_voice or not self.voice_model_loaded:
-            self.get_logger().warn("语音识别未启用或模型未加载")
+    def gesture_callback(self, msg):
+        """手势命令回调"""
+        command = msg.data
+        current_time = time.time()
+        
+        self.get_logger().info(f"收到手势命令: {command}")
+        
+        # 更新手势命令状态
+        self.last_gesture_command = command
+        self.last_gesture_time = current_time
+        
+        # 如果模式是纯手势，立即执行
+        if self.control_mode in ['gesture_only', 'both']:
+            self._execute_command(command, 'gesture')
+    
+    def _execute_command(self, command, source):
+        """执行单个命令"""
+        current_time = time.time()
+        
+        # 检查命令是否过期
+        source_time = self.last_voice_time if source == 'voice' else self.last_gesture_time
+        if current_time - source_time > self.timeout:
+            self.get_logger().warning(f"{source}命令已过期，忽略")
             return
         
-        if self.voice_thread and self.voice_thread.is_alive():
-            self.get_logger().info("语音识别已在运行")
+        # 执行移动相关命令
+        if command in self.command_velocity_map:
+            linear, angular = self.command_velocity_map[command]
+            
+            vel_msg = Twist()
+            vel_msg.linear.x = linear
+            vel_msg.angular.z = angular
+            
+            self.fused_cmd_pub.publish(vel_msg)
+            self.get_logger().info(f"执行{source}命令: {command} -> v={linear:.2f}, ω={angular:.2f}")
+        
+        # 执行动作相关命令（抓取、放置等）
+        elif command in ['pick_object', 'place_object', 'go_home']:
+            action_msg = String()
+            action_msg.data = command
+            self.fused_action_pub.publish(action_msg)
+            self.current_action = command
+            self.get_logger().info(f"执行{source}动作: {command}")
+    
+    def fusion_callback(self):
+        """命令融合回调"""
+        if not self.enable_fusion or self.control_mode != 'fused':
             return
         
-        self.is_listening = True
-        self.voice_thread = threading.Thread(target=self._voice_recognition_loop)
-        self.voice_thread.daemon = True
-        self.voice_thread.start()
-        self.get_logger().info("语音识别已启动")
-    
-    def stop_voice_recognition(self):
-        """停止语音识别"""
-        self.is_listening = False
-        if self.voice_thread:
-            self.voice_thread.join(timeout=2.0)
-        self.get_logger().info("语音识别已停止")
-    
-    def _voice_recognition_loop(self):
-        """语音识别主循环（模拟实现）"""
-        # 真实实现应使用 speech_recognition 库
-        # import speech_recognition as sr
+        current_time = time.time()
         
-        self.get_logger().info("开始监听语音命令...")
+        # 检查命令是否有效
+        voice_valid = (self.last_voice_command is not None and 
+                      current_time - self.last_voice_time <= self.timeout)
+        gesture_valid = (self.last_gesture_command is not None and 
+                        current_time - self.last_gesture_time <= self.timeout)
         
-        # 模拟语音命令（实际应从麦克风获取）
-        simulated_commands = [
-            ("前进", 2.0),
-            ("停止", 1.0),
-            ("左转", 1.5),
-            ("抓取", 1.0),
-            ("放下", 1.0),
-            ("右转", 1.5),
-            ("后退", 2.0),
-        ]
-        
-        for command, delay in simulated_commands:
-            if not self.is_listening:
-                break
-            
-            # 发布语音命令
-            msg = String()
-            msg.data = command
-            self.voice_cmd_pub.publish(msg)
-            self.get_logger().info(f"识别到语音命令: {command}")
-            
-            # 模拟延迟
-            import time
-            time.sleep(delay)
-        
-        self.get_logger().info("语音识别循环结束")
-    
-    def start_gesture_recognition(self):
-        """启动手势识别"""
-        if not self.enable_gesture or not self.gesture_model_loaded:
-            self.get_logger().warn("手势识别未启用或模型未加载")
+        # 如果没有有效命令，跳过融合
+        if not voice_valid and not gesture_valid:
             return
         
-        if self.gesture_thread and self.gesture_thread.is_alive():
-            self.get_logger().info("手势识别已在运行")
-            return
+        # 命令融合逻辑
+        linear = 0.0
+        angular = 0.0
+        final_command = None
         
-        self.is_tracking = True
-        self.gesture_thread = threading.Thread(target=self._gesture_recognition_loop)
-        self.gesture_thread.daemon = True
-        self.gesture_thread.start()
-        self.get_logger().info("手势识别已启动")
-    
-    def stop_gesture_recognition(self):
-        """停止手势识别"""
-        self.is_tracking = False
-        if self.gesture_thread:
-            self.gesture_thread.join(timeout=2.0)
-        self.get_logger().info("手势识别已停止")
-    
-    def _gesture_recognition_loop(self):
-        """手势识别主循环（模拟实现）"""
-        # 真实实现应使用 mediapipe 或 opencv
-        # import cv2, mediapipe as mp
-        
-        self.get_logger().info("开始手势识别...")
-        
-        # 模拟手势命令序列
-        simulated_gestures = [
-            ("forward", 2.0),
-            ("stop", 1.0),
-            ("left", 1.5),
-            ("grab", 1.0),
-            ("release", 1.0),
-            ("right", 1.5),
-            ("backward", 2.0),
-        ]
-        
-        for gesture, delay in simulated_gestures:
-            if not self.is_tracking:
-                break
+        if voice_valid and gesture_valid:
+            # 双命令融合
+            voice_linear, voice_angular = self.command_velocity_map.get(
+                self.last_voice_command, (0.0, 0.0)
+            )
+            gesture_linear, gesture_angular = self.command_velocity_map.get(
+                self.last_gesture_command, (0.0, 0.0)
+            )
             
-            # 发布手势命令
-            msg = String()
-            msg.data = gesture
-            self.gesture_cmd_pub.publish(msg)
-            self.get_logger().info(f"识别到手势: {gesture}")
+            # 加权融合
+            linear = (voice_linear * self.voice_priority + 
+                     gesture_linear * self.gesture_priority)
+            angular = (voice_angular * self.voice_priority + 
+                      gesture_angular * self.gesture_priority)
             
-            # 生成控制命令
-            self._generate_control_command(gesture, 'gesture')
+            final_command = f"融合[{self.last_voice_command}+{self.last_gesture_command}]"
             
-            # 模拟延迟
-            import time
-            time.sleep(delay)
+        elif voice_valid:
+            # 只有语音命令
+            linear, angular = self.command_velocity_map.get(
+                self.last_voice_command, (0.0, 0.0)
+            )
+            final_command = self.last_voice_command
+            
+        elif gesture_valid:
+            # 只有手势命令
+            linear, angular = self.command_velocity_map.get(
+                self.last_gesture_command, (0.0, 0.0)
+            )
+            final_command = self.last_gesture_command
         
-        self.get_logger().info("手势识别循环结束")
+        # 发布融合后的速度命令
+        if final_command:
+            vel_msg = Twist()
+            vel_msg.linear.x = linear
+            vel_msg.angular.z = angular
+            
+            self.fused_cmd_pub.publish(vel_msg)
+            
+            # 记录融合状态
+            self.get_logger().debug(f"命令融合: {final_command} -> v={linear:.2f}, ω={angular:.2f}")
     
-    def _generate_control_command(self, command, source):
-        """根据识别到的命令生成控制指令"""
-        cmd_msg = Twist()
+    def status_callback(self):
+        """状态发布回调"""
+        current_time = time.time()
         
-        if source == 'voice':
-            if command == VoiceCommand.GO_FORWARD.value:
-                cmd_msg.linear.x = 0.2
-            elif command == VoiceCommand.GO_BACKWARD.value:
-                cmd_msg.linear.x = -0.2
-            elif command == VoiceCommand.TURN_LEFT.value:
-                cmd_msg.angular.z = 0.5
-            elif command == VoiceCommand.TURN_RIGHT.value:
-                cmd_msg.angular.z = -0.5
-            elif command == VoiceCommand.STOP.value:
-                cmd_msg.linear.x = 0.0
-                cmd_msg.angular.z = 0.0
+        voice_active = (self.last_voice_command is not None and 
+                       current_time - self.last_voice_time <= self.timeout)
+        gesture_active = (self.last_gesture_command is not None and 
+                         current_time - self.last_gesture_time <= self.timeout)
         
-        elif source == 'gesture':
-            if command == GestureCommand.MOVE_FORWARD.value:
-                cmd_msg.linear.x = 0.15
-            elif command == GestureCommand.MOVE_BACKWARD.value:
-                cmd_msg.linear.x = -0.15
-            elif command == GestureCommand.TURN_LEFT.value:
-                cmd_msg.angular.z = 0.3
-            elif command == GestureCommand.TURN_RIGHT.value:
-                cmd_msg.angular.z = -0.3
-            elif command == GestureCommand.STOP.value:
-                cmd_msg.linear.x = 0.0
-                cmd_msg.angular.z = 0.0
+        status_msg = String()
         
-        # 发布融合后的控制命令
-        self.fused_cmd_pub.publish(cmd_msg)
+        if voice_active and gesture_active:
+            status = f"双模控制[语音:{self.last_voice_command}, 手势:{self.last_gesture_command}]"
+        elif voice_active:
+            status = f"语音控制[{self.last_voice_command}]"
+        elif gesture_active:
+            status = f"手势控制[{self.last_gesture_command}]"
+        else:
+            status = "等待输入"
+        
+        if self.current_action:
+            status += f" | 当前动作: {self.current_action}"
+        
+        status_msg.data = status
+        self.status_pub.publish(status_msg)
     
     def emergency_stop(self):
-        """紧急停止所有AI控制"""
-        self.stop_voice_recognition()
-        self.stop_gesture_recognition()
-        
-        # 发布停止命令
+        """紧急停止"""
         stop_msg = Twist()
         stop_msg.linear.x = 0.0
         stop_msg.angular.z = 0.0
         self.fused_cmd_pub.publish(stop_msg)
         
-        self.get_logger().warn("紧急停止已触发")
+        self.last_voice_command = None
+        self.last_gesture_command = None
+        self.current_action = None
+        
+        self.get_logger().warn("⚠️ 紧急停止已触发")
     
     def destroy_node(self):
         """清理资源"""
         self.emergency_stop()
         super().destroy_node()
-        
+
 def main(args=None):
     rclpy.init(args=args)
+    node = AIDetector()
     
     try:
-        node = AIDetector()
-        
-        # 启动AI检测
-        node.start_voice_recognition()
-        node.start_gesture_recognition()
+        node.get_logger().info("\n🤖 AI检测器启动")
+        node.get_logger().info("💡 控制模式: " + node.control_mode)
+        node.get_logger().info("💡 正在监听语音和手势命令...")
         
         rclpy.spin(node)
         
     except KeyboardInterrupt:
         node.get_logger().info("用户中断")
+    except Exception as e:
+        node.get_logger().error(f"AI检测器错误: {e}")
     finally:
         node.destroy_node()
         rclpy.shutdown()
