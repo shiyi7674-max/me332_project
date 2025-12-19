@@ -1,0 +1,62 @@
+# 代价地图通用参数
+costmap_common:
+  ros__parameters:
+    # 通用参数
+    footprint: "[ [0.18, 0.15], [0.18, -0.15], [-0.18, -0.15], [-0.18, 0.15] ]"
+    robot_radius: 0.2
+    inflation_radius: 0.3
+    cost_scaling_factor: 3.0
+    inflation_decay_distance: 2.0
+    
+    # 障碍物层参数
+    obstacle_layer:
+      enabled: true
+      max_obstacle_height: 2.0
+      raytrace_range: 3.0
+      obstacle_range: 2.5
+      track_unknown_space: false
+      clearing: true
+      marking: true
+      combination_method: 1
+      obstacle_rolling_window: false
+      min_obstacle_height: 0.0
+      max_z: 2.0
+      min_z: 0.0
+      unknown_threshold: 15
+      mark_threshold: 0
+      publish_voxel_map: false
+      voxel_size: 0.05
+      origin_z: 0.0
+      z_resolution: 0.05
+      z_voxels: 16
+      
+    # 膨胀层参数
+    inflation_layer:
+      cost_scaling_factor: 3.0
+      inflation_radius: 0.3
+      inflation_decay_distance: 2.0
+      
+    # 静态地图层参数
+    static_layer:
+      map_subscribe_transient_local: true
+      subscription_topic: "/map"
+      topic_name: "/map"
+      enabled: true
+      subscribe_to_updates: false
+      track_unknown_space: true
+      use_maximum: false
+      trinary_costmap: true
+      unknown_cost_value: 255
+      lethal_cost_threshold: 100
+      
+    # 激光雷达参数
+    scan:
+      data_type: "LaserScan"
+      topic: "/scan"
+      marking: true
+      clearing: true
+      inf_is_valid: false
+      raytrace_max_range: 3.0
+      raytrace_min_range: 0.0
+      obstacle_max_range: 2.5
+      obstacle_min_range: 0.0

@@ -1,18 +1,15 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <!-- ==================== 激光雷达 ==================== -->
-
   <xacro:macro name="lidar_sensor" params="prefix:='lidar'">
 
-    <!-- 激光雷达连杆 -->
     <link name="${prefix}_link">
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
           <cylinder length="0.05" radius="0.05"/>
         </geometry>
-        <material name="black"/>  <!-- 改为黑色，与底盘一致 -->
+        <material name="black"/>
       </visual>
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -23,18 +20,19 @@
       <xacro:cylinder_inertia m="0.1" r="0.05" h="0.05"/>
     </link>
 
-    <!-- 关节 - 安装在底盘上 -->
     <joint name="${prefix}_joint" type="fixed">
       <parent link="base_link"/>
       <child link="${prefix}_link"/>
-      <origin xyz="0 0 0.20" rpy="0 0 0"/>  <!-- 提高到0.20，避免碰撞 -->
+      <origin xyz="0.20 0 0.01" rpy="0 0 0"/>
     </joint>
 
-    <!-- Gazebo 插件：激光雷达 -->
     <gazebo reference="${prefix}_link">
-      <sensor name="${prefix}" type="ray">
-        <topic>scan</topic>
-
+      <sensor name="${prefix}" type="gpu_lidar">
+        
+        <topic>/scan</topic>
+        
+        <frame_id>${prefix}_link</frame_id>
+        
         <pose>0 0 0 0 0 0</pose>
         <visualize>false</visualize>
         <update_rate>10</update_rate>
@@ -53,8 +51,7 @@
             <resolution>0.01</resolution>
           </range>
         </ray>
-        
-        </sensor>
+      </sensor>
     </gazebo>
 
   </xacro:macro>

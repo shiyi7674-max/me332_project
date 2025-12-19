@@ -1,0 +1,12 @@
+robot_name: "my_robot"
+base_frame: "base_link"
+odom_frame: "odom"
+global_frame: "map"
+scan_topic: "/scan"
+odom_topic: "/odom"
+max_vel_x: 0.5
+min_vel_x: -0.2
+max_vel_theta: 1.0
+min_vel_theta: -1.0
+acc_lim_x: 0.5
+acc_lim_theta: 1.0

@@ -1,0 +1,27 @@
+amcl:
+  ros__parameters:
+
+    use_sim_time: true
+
+    # ===== 坐标系（与你当前 TF 完全一致）=====
+    base_frame_id: base_link
+    odom_frame_id: odom
+    global_frame_id: map
+
+    # ===== 雷达 =====
+    scan_topic: scan
+
+    # ===== AMCL 基本参数 =====
+    min_particles: 500
+    max_particles: 2000
+
+    update_min_d: 0.25
+    update_min_a: 0.2
+
+    resample_interval: 1
+    transform_tolerance: 1.0
+
+    recovery_alpha_slow: 0.0
+    recovery_alpha_fast: 0.0
+
+    do_beamskip: false
