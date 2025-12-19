@@ -18,19 +18,22 @@ class GestureControlNode(Node):
     def __init__(self):
         super().__init__('gesture_control_node')
         
-        # 参数 - 优化摄像头配置
+        # 参数 - 统一速度参数
         self.declare_parameter('camera_id', 0)
-        self.declare_parameter('control_sensitivity', 0.5)
+        self.declare_parameter('linear_speed', 0.2)  # 统一线速度
+        self.declare_parameter('angular_speed', 0.5)  # 统一角速度
         self.declare_parameter('show_video', True)
         self.declare_parameter('frame_width', 640)
         self.declare_parameter('frame_height', 480)
         self.declare_parameter('fps', 30)
         self.declare_parameter('flip_horizontal', True)
-        self.declare_parameter('process_every_n_frames', 2)  # 新增：跳帧参数
-        self.declare_parameter('image_scale', 0.5)  # 新增：图像缩放参数
+        self.declare_parameter('process_every_n_frames', 3)  # 增加跳帧，减少处理频率
+        self.declare_parameter('image_scale', 0.5)
+        self.declare_parameter('command_cooldown', 1.0)  # 新增：命令冷却时间（秒）
         
         self.camera_id = self.get_parameter('camera_id').value
-        self.sensitivity = self.get_parameter('control_sensitivity').value
+        self.linear_speed = self.get_parameter('linear_speed').value
+        self.angular_speed = self.get_parameter('angular_speed').value
         self.show_video = self.get_parameter('show_video').value
         self.frame_width = self.get_parameter('frame_width').value
         self.frame_height = self.get_parameter('frame_height').value
@@ -38,10 +41,17 @@ class GestureControlNode(Node):
         self.flip_horizontal = self.get_parameter('flip_horizontal').value
         self.process_every_n_frames = self.get_parameter('process_every_n_frames').value
         self.image_scale = self.get_parameter('image_scale').value
+        self.command_cooldown = self.get_parameter('command_cooldown').value
         
         # 发布者
         self.gesture_pub = self.create_publisher(String, '/gesture_control', 10)
-        self.velocity_pub = self.create_publisher(Twist, '/cmd_vel_gesture', 10)
+        self.velocity_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+
+        # 当前速度命令（持续发布）
+        self.current_cmd = Twist()
+        # 定时器：持续发布速度命令，降低频率
+        self.cmd_publish_period = 0.2  # 降低到5Hz
+        self.cmd_timer = self.create_timer(self.cmd_publish_period, self._publish_velocity)
         
         # MediaPipe Hands
         self.mp_hands = mp.solutions.hands
@@ -79,7 +89,10 @@ class GestureControlNode(Node):
         # 手势检测相关
         self.last_gesture = None
         self.gesture_cooldown = 0
-        self.cooldown_frames = 5
+        self.cooldown_frames = 10  # 增加冷却帧数
+        
+        # 命令冷却
+        self.last_command_time = 0
         
         # 调试信息
         self.debug_info = {}
@@ -89,7 +102,8 @@ class GestureControlNode(Node):
         self.last_gesture_type = None
         
         self.get_logger().info("手势控制节点初始化完成")
-        self.get_logger().info(f"性能设置: 跳帧={self.process_every_n_frames}, 图像缩放={self.image_scale}")
+        self.get_logger().info(f"速度参数: 线速度={self.linear_speed}, 角速度={self.angular_speed}")
+        self.get_logger().info(f"性能设置: 跳帧={self.process_every_n_frames}, 命令冷却={self.command_cooldown}s")
         self.get_logger().info("手势映射: 比4=停止, 比5=放下, 比耶=前进, OK=后退, 食指向左/右=转向")
     
     def _try_open_camera(self, camera_id):
@@ -184,6 +198,13 @@ class GestureControlNode(Node):
     def stop_capture(self):
         """停止视频捕获"""
         self.is_active = False
+        # 停止时发布停止速度，确保底盘停下
+        try:
+            stop_cmd = Twist()
+            self.current_cmd = stop_cmd
+            self.velocity_pub.publish(stop_cmd)
+        except Exception:
+            pass
         if self.capture_thread:
             self.capture_thread.join(timeout=2.0)
         
@@ -336,6 +357,10 @@ class GestureControlNode(Node):
             cv2.putText(frame, "Fist: Grab", (10, 240), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
             cv2.putText(frame, f"Frame Skip: {self.process_every_n_frames-1}", (10, 260), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(frame, f"Cooldown: {self.command_cooldown}s", (10, 280), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(frame, f"Speed: L={self.linear_speed}, A={self.angular_speed}", (10, 300), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
             cv2.putText(frame, "Press 'q' to quit, '+/-' adjust speed", (10, self.frame_height - 40), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
@@ -508,46 +533,73 @@ class GestureControlNode(Node):
         return None, None
     
     def _process_gesture(self, gesture, landmarks):
-        """处理识别到的手势"""
+        """处理识别到的手势 - 增加冷却时间"""
+        current_time = time.time()
+        
+        # 检查冷却时间
+        if current_time - self.last_command_time < self.command_cooldown:
+            return
+        
         if gesture in self.gesture_map:
             command = self.gesture_map[gesture]
             
-            if gesture != self.last_gesture:
-                # 发布手势命令
-                msg = String()
-                msg.data = command
-                self.gesture_pub.publish(msg)
-                
-                # 根据手势生成速度命令
-                vel_msg = Twist()
-                
-                if command == 'forward':      # 比耶手势
-                    vel_msg.linear.x = 0.2 * self.sensitivity
-                    vel_msg.angular.z = 0.0
-                elif command == 'backward':   # OK手势
-                    vel_msg.linear.x = -0.15 * self.sensitivity
-                    vel_msg.angular.z = 0.0
-                elif command == 'left':       # 食指向左
-                    vel_msg.linear.x = 0.0
-                    vel_msg.angular.z = 0.5 * self.sensitivity
-                elif command == 'right':      # 食指向右
-                    vel_msg.linear.x = 0.0
-                    vel_msg.angular.z = -0.5 * self.sensitivity
-                elif command == 'stop':       # 比4手势
-                    vel_msg.linear.x = 0.0
-                    vel_msg.angular.z = 0.0
-                # 'grab'和'release'命令不设置速度，只发布手势命令
-                
-                if command in ['forward', 'backward', 'left', 'right', 'stop']:
-                    self.velocity_pub.publish(vel_msg)
-                
-                self.get_logger().info(f"手势: {gesture} -> 命令: {command}")
-                self.last_gesture = gesture
+            # 更新最后命令时间
+            self.last_command_time = current_time
+            
+            # 发布手势命令
+            msg = String()
+            msg.data = command
+            self.gesture_pub.publish(msg)
+
+            # 根据手势生成并设置当前速度命令
+            vel_msg = Twist()
+
+            if command == 'forward':      # 比耶手势
+                vel_msg.linear.x = self.linear_speed
+                vel_msg.angular.z = 0.0
+            elif command == 'backward':   # OK手势
+                vel_msg.linear.x = -self.linear_speed * 0.75  # 后退速度略小
+                vel_msg.angular.z = 0.0
+            elif command == 'left':       # 食指向左
+                vel_msg.linear.x = 0.0
+                vel_msg.angular.z = self.angular_speed
+            elif command == 'right':      # 食指向右
+                vel_msg.linear.x = 0.0
+                vel_msg.angular.z = -self.angular_speed
+            elif command == 'stop':       # 比4手势
+                vel_msg.linear.x = 0.0
+                vel_msg.angular.z = 0.0
+
+            # 对于移动命令，设置当前命令
+            if command in ['forward', 'backward', 'left', 'right', 'stop']:
+                self.current_cmd = vel_msg
+                # 立即发布一次
+                try:
+                    self.velocity_pub.publish(self.current_cmd)
+                except Exception:
+                    pass
+
+            self.get_logger().info(f"手势: {gesture} -> 命令: {command}")
+            self.last_gesture = gesture
     
     def destroy_node(self):
         """清理资源"""
         self.stop_capture()
+        # 停用并清理定时器
+        try:
+            if hasattr(self, 'cmd_timer') and self.cmd_timer is not None:
+                self.cmd_timer.cancel()
+        except Exception:
+            pass
         super().destroy_node()
+
+    def _publish_velocity(self):
+        """定时发布当前速度命令"""
+        try:
+            if rclpy.ok():
+                self.velocity_pub.publish(self.current_cmd)
+        except Exception:
+            pass
 
 def main(args=None):
     rclpy.init(args=args)

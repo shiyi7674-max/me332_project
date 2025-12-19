@@ -7,6 +7,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
+from geometry_msgs.msg import Twist
 import threading
 import time
 import json
@@ -20,21 +21,33 @@ class VoiceControlNode(Node):
     def __init__(self):
         super().__init__('voice_control_node')
         
-        # 参数声明
+        # 参数声明 - 统一速度参数
         self.declare_parameter('model_path', '~/vosk-model-small-cn-0.22')
         self.declare_parameter('sample_rate', 16000)
         self.declare_parameter('energy_threshold', 0.01)
         self.declare_parameter('min_silence_duration', 1.0)
+        self.declare_parameter('linear_speed', 0.2)  # 统一线速度
+        self.declare_parameter('angular_speed', 0.5)  # 统一角速度
+        self.declare_parameter('command_cooldown', 1.5)  # 增加冷却时间
         
         # 获取参数
         self.sample_rate = self.get_parameter('sample_rate').value
         self.energy_threshold = self.get_parameter('energy_threshold').value
         self.min_silence_duration = self.get_parameter('min_silence_duration').value
+        self.linear_speed = self.get_parameter('linear_speed').value
+        self.angular_speed = self.get_parameter('angular_speed').value
+        self.command_cooldown = self.get_parameter('command_cooldown').value
         model_path = os.path.expanduser(self.get_parameter('model_path').value)
         
         # 发布者
         self.command_pub = self.create_publisher(String, '/voice_control', 10)
         self.speech_pub = self.create_publisher(String, '/speech_text', 10)
+        self.vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+
+        # 当前速度命令（用于持续发布）
+        self.current_cmd = Twist()
+        self.cmd_publish_period = 0.2  # 降低到5Hz
+        self.cmd_timer = self.create_timer(self.cmd_publish_period, self._publish_velocity)
         
         # 初始化Vosk模型
         self.get_logger().info("离线语音控制节点初始化...")
@@ -65,87 +78,159 @@ class VoiceControlNode(Node):
         # 统计信息
         self.recognition_count = 0
         self.last_command_time = 0
-        self.command_cooldown = 1.0
         
         # 命令映射表（与项目其他部分保持一致）
         self.command_map = {
-            # 移动命令
-            '前进': 'move_forward',
-            '往前走': 'move_forward',
-            '向前': 'move_forward',
-            '后退': 'move_backward',
-            '向后': 'move_backward',
-            '左转': 'turn_left',
-            '向左转': 'turn_left',
-            '向左': 'turn_left',
-            '右转': 'turn_right',
-            '向右转': 'turn_right',
-            '向右': 'turn_right',
-            
-            # 停止命令
+            '前进': 'forward',
+            '后退': 'backward',
+            '左转': 'left',
+            '右转': 'right',
             '停止': 'stop',
-            '停下': 'stop',
-            '停': 'stop',
-            '暂停': 'stop',
-            
-            # 抓取命令
-            '抓取': 'pick_object',
-            '抓': 'pick_object',
-            '拿': 'pick_object',
-            '取物': 'pick_object',
-            
-            # 放置命令
-            '放下': 'place_object',
-            '放置': 'place_object',
-            '放': 'place_object',
-            '释放': 'place_object',
-            
-            # 导航命令
-            '回家': 'go_home',
-            '返回': 'go_home',
-            '回原点': 'go_home',
-            '去起点': 'go_home',
+            '抓': 'grab',
+            '放': 'release',
         }
         
         # 查找音频设备
+        self._list_audio_devices()
         self._find_audio_device()
         
         self.get_logger().info("✅ 离线语音识别准备就绪")
+        self.get_logger().info(f"速度参数: 线速度={self.linear_speed}, 角速度={self.angular_speed}")
+        self.get_logger().info(f"命令冷却: {self.command_cooldown}秒")
+    
+    def _list_audio_devices(self):
+        """列出所有音频设备及其支持的信息"""
+        self.get_logger().info("=== 音频设备信息 ===")
+        
+        device_count = self.audio.get_device_count()
+        self.get_logger().info(f"检测到 {device_count} 个音频设备")
+        
+        for i in range(device_count):
+            try:
+                info = self.audio.get_device_info_by_index(i)
+                self.get_logger().info(f"设备 {i}: {info['name']}")
+                self.get_logger().info(f"  输入通道: {info['maxInputChannels']}")
+                self.get_logger().info(f"  默认采样率: {info['defaultSampleRate']}")
+                self.get_logger().info(f"  支持采样率: {info.get('supportedSampleRates', '未知')}")
+                
+                # 检查是否支持16000Hz
+                if info['maxInputChannels'] > 0:
+                    try:
+                        # 尝试查询支持的采样率
+                        sample_rates = [8000, 16000, 22050, 32000, 44100, 48000]
+                        supported = []
+                        for rate in sample_rates:
+                            try:
+                                if self.audio.is_format_supported(
+                                    rate,
+                                    input_device=info['index'],
+                                    input_channels=1,
+                                    input_format=pyaudio.paInt16
+                                ):
+                                    supported.append(rate)
+                            except:
+                                pass
+                        
+                        if supported:
+                            self.get_logger().info(f"  实际支持采样率: {supported}")
+                    except Exception as e:
+                        self.get_logger().debug(f"  采样率检测失败: {e}")
+                        
+            except Exception as e:
+                self.get_logger().debug(f"获取设备{i}信息失败: {e}")
     
     def _find_audio_device(self):
         """查找合适的音频设备"""
         device_count = self.audio.get_device_count()
         
+        # 首选支持16000Hz的设备
+        preferred_device = None
+        fallback_device = None
+        
         for i in range(device_count):
             try:
                 info = self.audio.get_device_info_by_index(i)
                 if info['maxInputChannels'] > 0:
-                    self.device_index = i
-                    self.get_logger().info(f"✅ 使用音频设备: {info['name']}")
-                    return
-            except:
-                continue
+                    # 检查是否支持16000Hz
+                    try:
+                        if self.audio.is_format_supported(
+                            self.sample_rate,
+                            input_device=info['index'],
+                            input_channels=1,
+                            input_format=pyaudio.paInt16
+                        ):
+                            preferred_device = i
+                            self.get_logger().info(f"✅ 找到支持{self.sample_rate}Hz的设备: {info['name']}")
+                            break
+                    except:
+                        # 如果不支持16000Hz，记录为备选
+                        if fallback_device is None:
+                            fallback_device = i
+                            self.get_logger().info(f"⚠️  备选设备: {info['name']} (可能不支持{self.sample_rate}Hz)")
+                        
+            except Exception as e:
+                self.get_logger().debug(f"检查设备{i}失败: {e}")
         
-        self.get_logger().error("❌ 未找到可用的音频输入设备")
-        raise Exception("No audio input device found")
+        # 选择设备
+        if preferred_device is not None:
+            self.device_index = preferred_device
+            self.actual_sample_rate = self.sample_rate
+        elif fallback_device is not None:
+            self.device_index = fallback_device
+            # 尝试使用默认采样率
+            try:
+                info = self.audio.get_device_info_by_index(fallback_device)
+                self.actual_sample_rate = int(info['defaultSampleRate'])
+                self.get_logger().info(f"⚠️  使用备选设备，采样率调整为: {self.actual_sample_rate}Hz")
+            except:
+                self.actual_sample_rate = 44100  # 最常见的采样率
+                self.get_logger().info(f"⚠️  使用备选设备，采样率调整为: {self.actual_sample_rate}Hz")
+        else:
+            self.get_logger().error("❌ 未找到可用的音频输入设备")
+            raise Exception("No audio input device found")
     
     def _open_audio_stream(self):
         """打开音频流"""
         try:
+            # 首先尝试使用指定的采样率
             self.stream = self.audio.open(
                 format=pyaudio.paInt16,
                 channels=1,
-                rate=self.sample_rate,
+                rate=self.actual_sample_rate,
                 input=True,
                 input_device_index=self.device_index,
-                frames_per_buffer=int(self.sample_rate * 0.1),
+                frames_per_buffer=int(self.actual_sample_rate * 0.1),
             )
             
-            self.get_logger().info(f"✅ 音频流打开成功")
+            self.get_logger().info(f"✅ 音频流打开成功 - 采样率: {self.actual_sample_rate}Hz")
             return True
             
         except Exception as e:
-            self.get_logger().error(f"❌ 无法打开音频流: {e}")
+            self.get_logger().error(f"❌ 无法以{self.actual_sample_rate}Hz打开音频流: {e}")
+            
+            # 尝试其他常见采样率
+            sample_rates = [8000, 11025, 16000, 22050, 32000, 44100, 48000]
+            for rate in sample_rates:
+                if rate == self.actual_sample_rate:
+                    continue
+                    
+                try:
+                    self.get_logger().info(f"尝试采样率: {rate}Hz")
+                    self.stream = self.audio.open(
+                        format=pyaudio.paInt16,
+                        channels=1,
+                        rate=rate,
+                        input=True,
+                        input_device_index=self.device_index,
+                        frames_per_buffer=int(rate * 0.1),
+                    )
+                    self.actual_sample_rate = rate
+                    self.get_logger().info(f"✅ 使用采样率: {rate}Hz")
+                    return True
+                except:
+                    continue
+            
+            self.get_logger().error("❌ 所有采样率尝试都失败")
             return False
     
     def _calculate_energy(self, audio_data):
@@ -193,7 +278,13 @@ class VoiceControlNode(Node):
     def _listening_loop(self):
         """监听循环"""
         try:
-            self.recognizer = KaldiRecognizer(self.model, self.sample_rate)
+            # 如果实际采样率与期望不同，需要重新创建识别器
+            if self.actual_sample_rate != self.sample_rate:
+                self.get_logger().warning(f"⚠️  实际采样率({self.actual_sample_rate}Hz)与模型期望采样率({self.sample_rate}Hz)不同")
+                self.get_logger().warning("⚠️  语音识别精度可能会降低")
+            
+            # 使用实际采样率创建识别器
+            self.recognizer = KaldiRecognizer(self.model, self.actual_sample_rate)
             
             audio_buffer = bytes()
             is_speaking = False
@@ -232,7 +323,7 @@ class VoiceControlNode(Node):
                             audio_buffer = bytes()
                             is_speaking = False
                             silence_counter = 0
-                            self.recognizer = KaldiRecognizer(self.model, self.sample_rate)
+                            self.recognizer = KaldiRecognizer(self.model, self.actual_sample_rate)
                             
                     else:
                         # 没有语音时，短暂休眠以降低CPU使用率
@@ -284,8 +375,10 @@ class VoiceControlNode(Node):
         clean_text = re.sub(r'[。，！？、,\.!\?]', '', text)
         
         current_time = time.time()
+        
+        # 检查冷却时间
         if current_time - self.last_command_time < self.command_cooldown:
-            self.get_logger().warning("命令冷却中...")
+            self.get_logger().warning(f"命令冷却中... 还需{self.command_cooldown - (current_time - self.last_command_time):.1f}秒")
             return False
         
         self.get_logger().info(f"处理文本: {clean_text}")
@@ -304,10 +397,51 @@ class VoiceControlNode(Node):
     
     def _publish_command(self, command, keyword):
         """发布命令"""
+        # 更新最后命令时间
+        self.last_command_time = time.time()
+        
+        # 发布命令消息
         msg = String()
         msg.data = command
         self.command_pub.publish(msg)
         self.get_logger().info(f"🚀 执行命令: {command}")
+        
+        # 根据命令设置速度
+        try:
+            vel = Twist()
+            if command == 'forward':
+                vel.linear.x = self.linear_speed
+                vel.angular.z = 0.0
+            elif command == 'backward':
+                vel.linear.x = -self.linear_speed * 0.75  # 后退速度略小
+                vel.angular.z = 0.0
+            elif command == 'left':
+                vel.linear.x = 0.0
+                vel.angular.z = self.angular_speed
+            elif command == 'right':
+                vel.linear.x = 0.0
+                vel.angular.z = -self.angular_speed
+            elif command == 'stop':
+                vel.linear.x = 0.0
+                vel.angular.z = 0.0
+            elif command == 'grab' or command == 'release':
+                # 机械臂控制命令，不控制底盘移动
+                vel = Twist()
+                vel.linear.x = 0.0
+                vel.angular.z = 0.0
+            else:
+                vel = Twist()
+                vel.linear.x = 0.0
+                vel.angular.z = 0.0
+
+            # 设置当前命令
+            self.current_cmd = vel
+            try:
+                self.vel_pub.publish(self.current_cmd)
+            except Exception:
+                pass
+        except Exception as e:
+            self.get_logger().debug(f"设置速度命令失败: {e}")
     
     def _close_audio_stream(self):
         """关闭音频流"""
@@ -330,13 +464,40 @@ class VoiceControlNode(Node):
             
             if self.recognition_thread:
                 self.recognition_thread.join(timeout=2.0)
+        # 停止时发布零速度，确保底盘停止
+        try:
+            stop_cmd = Twist()
+            self.current_cmd = stop_cmd
+            self.vel_pub.publish(stop_cmd)
+        except Exception:
+            pass
     
     def destroy_node(self):
         """清理资源"""
         self.stop_listening()
+        # 取消定时器并发布停止命令
+        try:
+            if hasattr(self, 'cmd_timer') and self.cmd_timer is not None:
+                self.cmd_timer.cancel()
+        except Exception:
+            pass
+        try:
+            stop_cmd = Twist()
+            self.current_cmd = stop_cmd
+            self.vel_pub.publish(stop_cmd)
+        except Exception:
+            pass
         if self.audio:
             self.audio.terminate()
         super().destroy_node()
+
+    def _publish_velocity(self):
+        """定时发布当前速度命令"""
+        try:
+            if rclpy.ok():
+                self.vel_pub.publish(self.current_cmd)
+        except Exception:
+            pass
 
 def main(args=None):
     rclpy.init(args=args)
@@ -344,7 +505,9 @@ def main(args=None):
     
     try:
         node.get_logger().info("\n🎤 离线语音控制节点启动")
-        node.get_logger().info("💡 常用命令: '前进', '后退', '左转', '右转', '停止'")
+        node.get_logger().info(f"💡 速度设置: 线速度={node.linear_speed}, 角速度={node.angular_speed}")
+        node.get_logger().info(f"💡 命令冷却: {node.command_cooldown}秒")
+        node.get_logger().info("💡 常用命令: '前进', '后退', '左转', '右转', '停止', '抓', '放'")
         node.get_logger().info("💡 检测到静音后自动识别")
         
         # 启动监听
