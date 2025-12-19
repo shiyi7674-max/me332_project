@@ -1,0 +1,1 @@
+controller_joint_names: ['', 'base_joint', 'boom_joint', 'stick_joint', 'wrist_joint', 'gripper1_joint', 'gripper2_joint', ]
