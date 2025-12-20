@@ -73,10 +73,10 @@ def generate_launch_description():
         arguments=[
             '-name', 'my_robot',
             '-topic', 'robot_description',
-            '-x', '5.5',  # [新增] X 坐标 (单位: 米)
-            '-y', '5.5',   # [新增] Y 坐标 (单位: 米)
+            #'-x', '5.5',  # 5.5[新增] X 坐标 (单位: 米)
+            #'-y', '5.5',   # 5.5[新增] Y 坐标 (单位: 米)
             '-z', '0',# 把机器人稍微抬高一点，防止卡在地里
-            '-Y', '3.14'
+            #'-Y', '3.14'#3.14
         ],
         output='screen'
     )
