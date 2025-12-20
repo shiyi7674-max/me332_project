@@ -73,7 +73,10 @@ def generate_launch_description():
         arguments=[
             '-name', 'my_robot',
             '-topic', 'robot_description',
-            '-z', '0.2' # 把机器人稍微抬高一点，防止卡在地里
+            '-x', '5.5',  # [新增] X 坐标 (单位: 米)
+            '-y', '5.5',   # [新增] Y 坐标 (单位: 米)
+            '-z', '0',# 把机器人稍微抬高一点，防止卡在地里
+            '-Y', '3.14'
         ],
         output='screen'
     )
@@ -106,7 +109,7 @@ def generate_launch_description():
         package='tf2_ros',
         executable='static_transform_publisher',
         name='lidar_tf_fix',
-        arguments=['0.20', '0', '0.01', '0', '0', '0', 'lidar_link', 'my_robot/base_footprint/lidar'],
+        arguments=['0.15', '0', '0.01', '0', '0', '0', 'lidar_link', 'my_robot/base_footprint/lidar'],
         output='screen',
         # ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
         # 必须加上这一行！否则 TF 时间戳和雷达数据对不上

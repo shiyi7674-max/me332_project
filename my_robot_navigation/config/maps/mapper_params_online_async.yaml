@@ -28,8 +28,8 @@ slam_toolbox:
     throttle_scans: 1
     transform_publish_period: 0.02 #if 0 never publishes odometry
     map_update_interval: 5.0
-    resolution: 0.05
-    min_laser_range: 0.0 #for rastering images
+    resolution: 0.02 # 进阶修改：分辨率 (解决 5x5 像素块难以区分的问题)
+    min_laser_range: 0.2 #for rastering images忽略距离雷达中心 0.2 米以内的所有点
     max_laser_range: 20.0 #for rastering images
     minimum_time_interval: 0.5
     transform_timeout: 0.2
@@ -44,7 +44,8 @@ slam_toolbox:
     minimum_travel_heading: 0.5
     scan_buffer_size: 10
     scan_buffer_maximum_scan_distance: 10.0
-    link_match_minimum_response_fine: 0.1  
+    link_match_minimum_response_fine: 0.6  # 这个参数控制图优化时的匹配得分阈值
+    # 默认值可能比较低，调高它意味着：只有雷达数据和地图非常吻合时，才把新数据画上去
     link_scan_maximum_distance: 1.5
     loop_search_maximum_distance: 3.0
     do_loop_closing: true 
