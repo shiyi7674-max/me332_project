@@ -1,0 +1,95 @@
+# DWB 控制器参数
+controller_server:
+  ros__parameters:
+    controller_frequency: 20.0
+    min_x_velocity_threshold: 0.001
+    min_y_velocity_threshold: 0.001
+    min_theta_velocity_threshold: 0.001
+    failure_tolerance: 1.0
+    
+    # 控制器插件配置
+    controller_plugins: ["FollowPath"]
+    FollowPath:
+      plugin: "dwb_core::DWBLocalPlanner"
+      debug_trajectory_details: False
+      
+      # 速度限制
+      min_vel_x: -0.2
+      max_vel_x: 0.3
+      min_vel_y: 0.0
+      max_vel_y: 0.0
+      min_vel_theta: -0.5
+      max_vel_theta: 0.5
+      min_speed_xy: 0.0
+      max_speed_xy: 0.3
+      min_speed_theta: 0.0
+      acc_lim_x: 2.5
+      acc_lim_y: 0.0
+      acc_lim_theta: 3.2
+      decel_lim_x: -2.5
+      decel_lim_y: 0.0
+      decel_lim_theta: -3.2
+      
+      # 采样参数
+      vx_samples: 20
+      vy_samples: 0
+      vtheta_samples: 40
+      sim_time: 1.5
+      linear_granularity: 0.01
+      angular_granularity: 0.01
+      transform_tolerance: 0.1
+      
+      # 目标检查
+      xy_goal_tolerance: 0.1
+      yaw_goal_tolerance: 0.2
+      trans_stopped_velocity: 0.05
+      rot_stopped_velocity: 0.1
+      lat_dist_stopped_velocity: 0.05
+      
+      # 轨迹评分器
+      critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+      
+      # 评分器权重
+      RotateToGoal:
+        scale: 32.0
+        slo: 5.0
+        lookahead_time: -1.0
+      
+      Oscillation:
+        scale: 1.0
+        oscillation_reset_dist: 0.05
+        oscillation_reset_angle: 0.2
+      
+      BaseObstacle:
+        scale: 0.02
+        sum_scores: True
+        collision_scaling_factor: 1.0
+      
+      GoalAlign:
+        scale: 24.0
+        forward_point_distance: 0.325
+      
+      PathAlign:
+        scale: 32.0
+        forward_point_distance: 0.325
+      
+      PathDist:
+        scale: 32.0
+      
+      GoalDist:
+        scale: 24.0
+        forward_point_distance: 0.325
+      
+      # 障碍物代价函数
+      ObstacleFootprint:
+        sum_scores: True
+        scale: 0.1
+      
+      # 前向模拟
+      simulate_trajectory:
+        vx_samples: 20
+        vtheta_samples: 20
+        sim_granularity: 0.025
+        angular_sim_granularity: 0.025
+        use_dwa: True
+        dwa_ref_ctrl_ratio: 1.0

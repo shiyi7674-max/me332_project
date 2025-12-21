@@ -1,106 +1,144 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-    <xacro:macro name="mobile_base">
+  <xacro:macro name="mobile_base">
 
-        <xacro:property name="chassis_radius" value="0.14" /> <xacro:property name="chassis_height" value="0.12" />
-        <xacro:property name="chassis_mass" value="10.0" />   <xacro:property name="wheel_radius" value="0.04" />   <xacro:property name="wheel_width" value="0.02" />
-        <xacro:property name="wheel_offset_y" value="0.13" /> <xacro:property name="caster_radius" value="0.02" />  <xacro:property name="caster_offset_x" value="0.10" /> <material name="blue">
-            <color rgba="0.1 0.1 0.8 1"/>
-        </material>
-        <material name="black">
-            <color rgba="0.1 0.1 0.1 1"/>
-        </material>
+    <!-- ========== 参数 ========== -->
+    <xacro:property name="chassis_radius" value="0.14" />
+    <xacro:property name="chassis_height" value="0.12" />
+    <xacro:property name="chassis_mass" value="10.0" />
 
+    <xacro:property name="wheel_radius" value="0.04" />
+    <xacro:property name="wheel_width" value="0.02" />
+    <xacro:property name="wheel_offset_y" value="0.13" />
 
-        <link name="base_footprint" />
+    <xacro:property name="caster_radius" value="0.02" />
+    <xacro:property name="caster_offset_x" value="0.10" />
 
+    <!-- ========== base footprint ========== -->
+    <link name="base_footprint">
+      
+    </link>
 
-        <joint name="base_joint" type="fixed">
-            <parent link="base_footprint" />
-            <child link="base_link" />
-            <origin xyz="0 0 ${wheel_radius}" rpy="0 0 0" />
-        </joint>
+    <joint name="base_joint" type="fixed">
+      <parent link="base_footprint"/>
+      <child link="base_link"/>
+      <origin xyz="0 0 ${wheel_radius}" rpy="0 0 0"/>
+    </joint>
 
-        <link name="base_link">
-            <visual>
-                <origin xyz="0 0 ${chassis_height/2}" rpy="0 0 0" />
-                <geometry>
-                    <cylinder radius="${chassis_radius}" length="${chassis_height}" />
-                </geometry>
-                <material name="blue" />
-            </visual>
-            <collision>
-                <origin xyz="0 0 ${chassis_height/2}" rpy="0 0 0" />
-                <geometry>
-                    <cylinder radius="${chassis_radius}" length="${chassis_height}" />
-                </geometry>
-            </collision>
-            <xacro:cylinder_inertia m="${chassis_mass}" r="${chassis_radius}" h="${chassis_height}" />
-        </link>
+    <!-- ========== base link ========== -->
+    <link name="base_link">
+      <visual>
+        <origin xyz="0 0 ${chassis_height/2}" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius="${chassis_radius}" length="${chassis_height}"/>
+        </geometry>
+        <material name="blue"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 ${chassis_height/2}" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius="${chassis_radius}" length="${chassis_height}"/>
+        </geometry>
+      </collision>
+      <xacro:cylinder_inertia
+        m="${chassis_mass}"
+        r="${chassis_radius}"
+        h="${chassis_height}"/>
+    </link>
 
+    <!-- ========== 轮子宏 ========== -->
+    <xacro:macro name="wheel" params="prefix y_reflect">
 
-        <xacro:macro name="wheel" params="prefix y_reflect">
-            <link name="${prefix}_wheel_link">
-                <visual>
-                    <origin xyz="0 0 0" rpy="${pi/2} 0 0" />
-                    <geometry>
-                        <cylinder radius="${wheel_radius}" length="${wheel_width}" />
-                    </geometry>
-                    <material name="black" />
-                </visual>
-                <collision>
-                    <origin xyz="0 0 0" rpy="${pi/2} 0 0" />
-                    <geometry>
-                        <cylinder radius="${wheel_radius}" length="${wheel_width}" />
-                    </geometry>
-                </collision>
-                <xacro:cylinder_inertia m="0.5" r="${wheel_radius}" h="${wheel_width}" />
-            </link>
+      <link name="${prefix}_wheel_link">
+        <visual>
+          <!-- 轮子横放 -->
+          <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+          <geometry>
+            <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+          </geometry>
+          <material name="black"/>
+        </visual>
+        <collision>
+          <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+          <geometry>
+            <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+          </geometry>
+        </collision>
+        
+        <!-- ★★★ 关键修改：惯性矩阵的轴要与轮一致 ★★★ -->
+        <inertial>
+          <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+          <mass value="0.5"/>
+          <inertia
+            ixx="${(0.5/12) * (3*wheel_radius*wheel_radius + wheel_width*wheel_width)}"
+            ixy="0" ixz="0"
+            iyy="${(0.5/12) * (3*wheel_radius*wheel_radius + wheel_width*wheel_width)}"
+            iyz="0"
+            izz="${(0.5/2) * (wheel_radius*wheel_radius)}"/>
+        </inertial>
+        
+      </link>
 
-            <joint name="${prefix}_wheel_joint" type="continuous">
-                <parent link="base_link" />
-                <child link="${prefix}_wheel_link" />
-                <origin xyz="0 ${y_reflect * wheel_offset_y} 0" rpy="0 0 0" />
-                <axis xyz="0 1 0" />
-            </joint>
-        </xacro:macro>
+      <!-- ★★★ 关键修改：axis 改为   轴 ★★★ -->
+      <joint name="${prefix}_wheel_joint" type="continuous">
+        <parent link="base_link"/>
+        <child link="${prefix}_wheel_link"/>
+        <origin xyz="0 ${y_reflect * wheel_offset_y} 0" rpy="0 0 0"/>
+        <axis xyz="0 1 0"/>
+        <limit effort="0.2" velocity="20.0"/>
+      </joint>
 
-        <xacro:wheel prefix="left" y_reflect="1" />
-        <xacro:wheel prefix="right" y_reflect="-1" />
-
-
-        <xacro:macro name="caster_wheel" params="prefix x_reflect">
-            <link name="${prefix}_caster_wheel">
-                <visual>
-                    <geometry>
-                        <sphere radius="${caster_radius}" />
-                    </geometry>
-                    <material name="black" />
-                </visual>
-                <collision>
-                    <geometry>
-                        <sphere radius="${caster_radius}" />
-                    </geometry>
-                </collision>
-                <xacro:sphere_inertia m="0.1" r="${caster_radius}" />
-            </link>
-
-            <joint name="${prefix}_caster_joint" type="fixed">
-                <parent link="base_link" />
-                <child link="${prefix}_caster_wheel" />
-                <origin xyz="${x_reflect * caster_offset_x} 0 ${caster_radius - wheel_radius}" rpy="0 0 0" />
-            </joint>
-
-            <gazebo reference="${prefix}_caster_wheel">
-                <mu1>0.001</mu1>
-                <mu2>0.001</mu2>
-                <material>Gazebo/Black</material>
-            </gazebo>
-        </xacro:macro>
-
-        <xacro:caster_wheel prefix="front" x_reflect="1" />
-        <xacro:caster_wheel prefix="back" x_reflect="-1" />
+      <gazebo reference="${prefix}_wheel_link">
+        <mu1>1.0</mu1>
+        <mu2>1.0</mu2>
+        <kp>1000000.0</kp>
+        <kd>100.0</kd>
+        <gravity>true</gravity>
+        <self_collide>false</self_collide>
+      </gazebo>
 
     </xacro:macro>
+
+    <!-- 左右轮 -->
+    <xacro:wheel prefix="left"  y_reflect="1"/>
+    <xacro:wheel prefix="right" y_reflect="-1"/>
+
+    <!-- ========== 脚轮 ========== -->
+    <xacro:macro name="caster_wheel" params="prefix x_reflect">
+
+      <link name="${prefix}_caster_wheel">
+        <visual>
+          <geometry>
+            <sphere radius="${caster_radius}"/>
+          </geometry>
+          <material name="black"/>
+        </visual>
+        <collision>
+          <geometry>
+            <sphere radius="${caster_radius}"/>
+          </geometry>
+        </collision>
+        <xacro:sphere_inertia m="0.1" r="${caster_radius}"/>
+      </link>
+
+      <joint name="${prefix}_caster_joint" type="fixed">
+        <parent link="base_link"/>
+        <child link="${prefix}_caster_wheel"/>
+        <origin xyz="${x_reflect * caster_offset_x} 0 ${caster_radius - wheel_radius}" rpy="0 0 0"/>
+      </joint>
+
+      <gazebo reference="${prefix}_caster_wheel">
+        <mu1>0.001</mu1>
+        <mu2>0.001</mu2>
+        <gravity>true</gravity>
+      </gazebo>
+
+    </xacro:macro>
+
+    <xacro:caster_wheel prefix="front" x_reflect="1"/>
+    <xacro:caster_wheel prefix="back"  x_reflect="-1"/>
+
+  </xacro:macro>
 </robot>
+
