@@ -1,0 +1,443 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="ros2_sim">
+  <link
+    name="base">
+    <inertial>
+      <origin
+        xyz="-1.60033437349688E-18 -0.005 1.04747665444306E-17"
+        rpy="0 0 0" />
+      <mass
+        value="0.0567450173054657" />
+      <inertia
+        ixx="2.60967970212116E-05"
+        ixy="2.82133496763036E-22"
+        ixz="-1.6940658945086E-21"
+        iyy="5.12478437539987E-05"
+        iyz="5.45047151323007E-23"
+        izz="2.60967970212116E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://ros2_sim/meshes/base.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://ros2_sim/meshes/base.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="3.9002469351753E-10 0.0402682304308751 4.30569158116084E-09"
+        rpy="0 0 0" />
+      <mass
+        value="0.124890716575147" />
+      <inertia
+        ixx="9.27843237113564E-05"
+        ixy="-1.81820399960508E-12"
+        ixz="2.81368669640517E-11"
+        iyy="3.2996480797957E-05"
+        iyz="-2.15623744000747E-11"
+        izz="8.99131695457092E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://ros2_sim/meshes/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://ros2_sim/meshes/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="base_joint"
+    type="continuous">
+    <origin
+      xyz="0 0 0"
+      rpy="1.5708 0 1.5494" />
+    <parent
+      link="base" />
+    <child
+      link="base_link" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      
+      effort="50"
+      velocity="3.14" />
+    <dynamics
+      damping="0.5"
+      friction="0.2" />
+    <safety_controller
+      soft_upper_limit="1.8"
+      soft_lower_limit="-1"
+      k_position="100"
+      k_velocity="10" />
+  </joint>
+  <link
+    name="boom">
+    <inertial>
+      <origin
+        xyz="5.55111512312578E-17 0.0725000000000001 5.44269490587723E-18"
+        rpy="0 0 0" />
+      <mass
+        value="0.238854677214736" />
+      <inertia
+        ixx="0.000497928132261683"
+        ixy="-1.65594941188216E-19"
+        ixz="-1.05879118406788E-22"
+        iyy="5.87726764163228E-05"
+        iyz="4.2351647362715E-22"
+        izz="0.000502414245810327" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://ros2_sim/meshes/boom.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://ros2_sim/meshes/boom.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="boom_joint"
+    type="revolute">
+    <origin
+      xyz="0 0.09 0"
+      rpy="0 0 -1.4684" />
+    <parent
+      link="base_link" />
+    <child
+      link="boom" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-0.8"
+      upper="1.5"
+      effort="50"
+      velocity="3.14" />
+    <dynamics
+      damping="0.5"
+      friction="0.2" />
+    <safety_controller
+      soft_upper_limit="1.8"
+      soft_lower_limit="-1"
+      k_position="100"
+      k_velocity="10" />
+  </joint>
+  <link
+    name="stick">
+    <inertial>
+      <origin
+        xyz="-1.11843248551402E-09 0.0725000059494124 -1.9384471590389E-08"
+        rpy="0 0 0" />
+      <mass
+        value="0.213608786801651" />
+      <inertia
+        ixx="0.000373907028297135"
+        ixy="-5.57398978615582E-12"
+        ixz="1.38658290747926E-12"
+        iyy="5.63436589421885E-05"
+        iyz="2.07772668891586E-11"
+        izz="0.000369720498308108" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://ros2_sim/meshes/stick.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://ros2_sim/meshes/stick.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="stick_joint"
+    type="revolute">
+    <origin
+      xyz="0 0.145 0"
+      rpy="-3.1416 0 -3.1209" />
+    <parent
+      link="boom" />
+    <child
+      link="stick" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.1"
+      upper="1.9"
+      effort="50"
+      velocity="3.14" />
+    <dynamics
+      damping="0.5"
+      friction="0.2" />
+    <safety_controller
+      soft_upper_limit="1.8"
+      soft_lower_limit="-1"
+      k_position="100"
+      k_velocity="10" />
+  </joint>
+  <link
+    name="wrist">
+    <inertial>
+      <origin
+        xyz="-9.1725793627262E-11 0.0291868512921932 -1.52966684457967E-11"
+        rpy="0 0 0" />
+      <mass
+        value="0.096892259983795" />
+      <inertia
+        ixx="4.91148837892503E-05"
+        ixy="1.55334341513081E-13"
+        ixz="1.10197898181765E-12"
+        iyy="2.83210790939703E-05"
+        iyz="2.4969094981876E-14"
+        izz="5.08339130720893E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://ros2_sim/meshes/wrist.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://ros2_sim/meshes/wrist.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="wrist_joint"
+    type="revolute">
+    <origin
+      xyz="0 0.145 0"
+      rpy="0 0 0.22719" />
+    <parent
+      link="stick" />
+    <child
+      link="wrist" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.5"
+      upper="1.5"
+      effort="50"
+      velocity="3.14" />
+    <dynamics
+      damping="0.5"
+      friction="0.2" />
+    <safety_controller
+      soft_upper_limit="1.8"
+      soft_lower_limit="-1"
+      k_position="100"
+      k_velocity="10" />
+  </joint>
+  <link
+    name="gripper1">
+    <inertial>
+      <origin
+        xyz="-0.0121000181512973 -2.77555756156289E-17 0.0328269389844376"
+        rpy="0 0 0" />
+      <mass
+        value="0.024535444434625" />
+      <inertia
+        ixx="1.18614897633984E-05"
+        ixy="1.16467030247466E-21"
+        ixz="-9.21066216267171E-07"
+        iyy="1.25340108198844E-05"
+        iyz="1.12364214409203E-20"
+        izz="2.30821735212762E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://ros2_sim/meshes/gripper1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://ros2_sim/meshes/gripper1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="gripper1_joint"
+    type="revolute">
+    <origin
+      xyz="0 0.068 -0.02"
+      rpy="3.1416 -1.2227 1.5708" />
+    <parent
+      link="wrist" />
+    <child
+      link="gripper1" />
+    <axis
+      xyz="0 -1 0" />
+    <limit
+      lower="-1.1"
+      upper="1.1"
+      effort="50"
+      velocity="3.14" />
+    <dynamics
+      damping="0.5"
+      friction="0.2" />
+    <safety_controller
+      soft_upper_limit="2"
+      soft_lower_limit="-1"
+      k_position="100"
+      k_velocity="10" />
+  </joint>
+  <link
+    name="gripper2">
+    <inertial>
+      <origin
+        xyz="-0.0121000181512973 8.32667268468867E-17 0.0328269389844376"
+        rpy="0 0 0" />
+      <mass
+        value="0.024535444434625" />
+      <inertia
+        ixx="1.18614897633984E-05"
+        ixy="-1.93229391092387E-21"
+        ixz="-9.21066216267173E-07"
+        iyy="1.25340108198844E-05"
+        iyz="-1.01643953670516E-20"
+        izz="2.30821735212762E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://ros2_sim/meshes/gripper2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://ros2_sim/meshes/gripper2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="gripper2_joint"
+    type="revolute">
+    <origin
+      xyz="0 0.068 0.02"
+      rpy="0 1.4498 1.5708" />
+    <parent
+      link="wrist" />
+    <child
+      link="gripper2" />
+    <axis
+      xyz="0 1 0" />
+   <limit
+      lower="-1.1"
+      upper="1.1"
+      effort="50"
+      velocity="3.14" />
+    <dynamics
+      damping="0.5"
+      friction="0.2" />
+    <safety_controller
+      soft_upper_limit="2"
+      soft_lower_limit="-1"
+      k_position="100"
+      k_velocity="10" />
+
+  </joint>
+</robot>
