@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+  Converted from SolidWorks URDF to Xacro format
+  Original URDF created by SolidWorks to URDF Exporter
+  Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+-->
+<robot name="ros2_sim" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ============ Parameters ============ -->
+  <!-- Material colors -->
+  <xacro:property name="default_color" value="1 1 1 1" />
+  
+  <!-- Joint limits (can be overridden) -->
+  <xacro:property name="default_effort" value="50" />
+  <xacro:property name="default_velocity" value="3.14" />
+  <xacro:property name="default_damping" value="0.5" />
+  <xacro:property name="default_friction" value="0.2" />
+  
+  <!-- Safety controller parameters -->
+  <xacro:property name="safety_k_position" value="100" />
+  <xacro:property name="safety_k_velocity" value="10" />
+  
+  <!-- Mesh package prefix -->
+  <xacro:property name="mesh_package" value="ros2_sim" />
+  
+  <!-- ============ Base Link ============ -->
+  <xacro:macro name="base_link" params="prefix:=''">
+    <link name="${prefix}base">
+      <inertial>
+        <origin xyz="-1.60033437349688E-18 -0.005 1.04747665444306E-17" rpy="0 0 0" />
+        <mass value="0.0567450173054657" />
+        <inertia
+          ixx="2.60967970212116E-05"
+          ixy="2.82133496763036E-22"
+          ixz="-1.6940658945086E-21"
+          iyy="5.12478437539987E-05"
+          iyz="5.45047151323007E-23"
+          izz="2.60967970212116E-05" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://${mesh_package}/meshes/base.STL" />
+        </geometry>
+        <material name="${prefix}white">
+          <color rgba="${default_color}" />
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://${mesh_package}/meshes/base.STL" />
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+  
+  <!-- ============ Base Link (second part) ============ -->
+  <xacro:macro name="base_link_secondary" params="prefix:=''">
+    <link name="${prefix}base_link">
+      <inertial>
+        <origin xyz="3.9002469351753E-10 0.0402682304308751 4.30569158116084E-09" rpy="0 0 0" />
+        <mass value="0.124890716575147" />
+        <inertia
+          ixx="9.27843237113564E-05"
+          ixy="-1.81820399960508E-12"
+          ixz="2.81368669640517E-11"
+          iyy="3.2996480797957E-05"
+          iyz="-2.15623744000747E-11"
+          izz="8.99131695457092E-05" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://${mesh_package}/meshes/base_link.STL" />
+        </geometry>
+        <material name="${prefix}white">
+          <color rgba="${default_color}" />
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://${mesh_package}/meshes/base_link.STL" />
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+  
+  <!-- ============ Base Joint ============ -->
+  <xacro:macro name="base_joint" params="prefix:=''">
+    <joint name="${prefix}base_joint" type="continuous">
+      <origin xyz="0 0 0" rpy="1.5708 0 1.5494" />
+      <parent link="${prefix}base" />
+      <child link="${prefix}base_link" />
+      <axis xyz="0 1 0" />
+      <limit effort="${default_effort}" velocity="${default_velocity}" />
+      <dynamics damping="${default_damping}" friction="${default_friction}" />
+      <safety_controller
+        soft_upper_limit="1.8"
+        soft_lower_limit="-1"
+        k_position="${safety_k_position}"
+        k_velocity="${safety_k_velocity}" />
+    </joint>
+  </xacro:macro>
+  
+  <!-- ============ Boom ============ -->
+  <xacro:macro name="boom_link" params="prefix:=''">
+    <link name="${prefix}boom">
+      <inertial>
+        <origin xyz="5.55111512312578E-17 0.0725000000000001 5.44269490587723E-18" rpy="0 0 0" />
+        <mass value="0.238854677214736" />
+        <inertia
+          ixx="0.000497928132261683"
+          ixy="-1.65594941188216E-19"
+          ixz="-1.05879118406788E-22"
+          iyy="5.87726764163228E-05"
+          iyz="4.2351647362715E-22"
+          izz="0.000502414245810327" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://${mesh_package}/meshes/boom.STL" />
+        </geometry>
+        <material name="${prefix}white">
+          <color rgba="${default_color}" />
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://${mesh_package}/meshes/boom.STL" />
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+  
+  <!-- ============ Boom Joint ============ -->
+  <xacro:macro name="boom_joint" params="prefix:='' lower:='-0.8' upper:='1.5'">
+    <joint name="${prefix}boom_joint" type="revolute">
+      <origin xyz="0 0.09 0" rpy="0 0 -1.4684" />
+      <parent link="${prefix}base_link" />
+      <child link="${prefix}boom" />
+      <axis xyz="0 0 1" />
+      <limit lower="${lower}" upper="${upper}" effort="${default_effort}" velocity="${default_velocity}" />
+      <dynamics damping="${default_damping}" friction="${default_friction}" />
+      <safety_controller
+        soft_upper_limit="1.8"
+        soft_lower_limit="-1"
+        k_position="${safety_k_position}"
+        k_velocity="${safety_k_velocity}" />
+    </joint>
+  </xacro:macro>
+  
+  <!-- ============ Stick ============ -->
+  <xacro:macro name="stick_link" params="prefix:=''">
+    <link name="${prefix}stick">
+      <inertial>
+        <origin xyz="-1.11843248551402E-09 0.0725000059494124 -1.9384471590389E-08" rpy="0 0 0" />
+        <mass value="0.213608786801651" />
+        <inertia
+          ixx="0.000373907028297135"
+          ixy="-5.57398978615582E-12"
+          ixz="1.38658290747926E-12"
+          iyy="5.63436589421885E-05"
+          iyz="2.07772668891586E-11"
+          izz="0.000369720498308108" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://${mesh_package}/meshes/stick.STL" />
+        </geometry>
+        <material name="${prefix}white">
+          <color rgba="${default_color}" />
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://${mesh_package}/meshes/stick.STL" />
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+  
+  <!-- ============ Stick Joint ============ -->
+  <xacro:macro name="stick_joint" params="prefix:='' lower:='-1.1' upper:='1.9'">
+    <joint name="${prefix}stick_joint" type="revolute">
+      <origin xyz="0 0.145 0" rpy="-3.1416 0 -3.1209" />
+      <parent link="${prefix}boom" />
+      <child link="${prefix}stick" />
+      <axis xyz="0 0 1" />
+      <limit lower="${lower}" upper="${upper}" effort="${default_effort}" velocity="${default_velocity}" />
+      <dynamics damping="${default_damping}" friction="${default_friction}" />
+      <safety_controller
+        soft_upper_limit="1.8"
+        soft_lower_limit="-1"
+        k_position="${safety_k_position}"
+        k_velocity="${safety_k_velocity}" />
+    </joint>
+  </xacro:macro>
+  
+  <!-- ============ Wrist ============ -->
+  <xacro:macro name="wrist_link" params="prefix:=''">
+    <link name="${prefix}wrist">
+      <inertial>
+        <origin xyz="-9.1725793627262E-11 0.0291868512921932 -1.52966684457967E-11" rpy="0 0 0" />
+        <mass value="0.096892259983795" />
+        <inertia
+          ixx="4.91148837892503E-05"
+          ixy="1.55334341513081E-13"
+          ixz="1.10197898181765E-12"
+          iyy="2.83210790939703E-05"
+          iyz="2.4969094981876E-14"
+          izz="5.08339130720893E-05" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://${mesh_package}/meshes/wrist.STL" />
+        </geometry>
+        <material name="${prefix}white">
+          <color rgba="${default_color}" />
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://${mesh_package}/meshes/wrist.STL" />
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+  
+  <!-- ============ Wrist Joint ============ -->
+  <xacro:macro name="wrist_joint" params="prefix:='' lower:='-1.5' upper:='1.5'">
+    <joint name="${prefix}wrist_joint" type="revolute">
+      <origin xyz="0 0.145 0" rpy="0 0 0.22719" />
+      <parent link="${prefix}stick" />
+      <child link="${prefix}wrist" />
+      <axis xyz="0 0 1" />
+      <limit lower="${lower}" upper="${upper}" effort="${default_effort}" velocity="${default_velocity}" />
+      <dynamics damping="${default_damping}" friction="${default_friction}" />
+      <safety_controller
+        soft_upper_limit="1.8"
+        soft_lower_limit="-1"
+        k_position="${safety_k_position}"
+        k_velocity="${safety_k_velocity}" />
+    </joint>
+  </xacro:macro>
+  
+  <!-- ============ Gripper1 ============ -->
+  <xacro:macro name="gripper1_link" params="prefix:=''">
+    <link name="${prefix}gripper1">
+      <inertial>
+        <origin xyz="-0.0121000181512973 -2.77555756156289E-17 0.0328269389844376" rpy="0 0 0" />
+        <mass value="0.024535444434625" />
+        <inertia
+          ixx="1.18614897633984E-05"
+          ixy="1.16467030247466E-21"
+          ixz="-9.21066216267171E-07"
+          iyy="1.25340108198844E-05"
+          iyz="1.12364214409203E-20"
+          izz="2.30821735212762E-06" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://${mesh_package}/meshes/gripper1.STL" />
+        </geometry>
+        <material name="${prefix}white">
+          <color rgba="${default_color}" />
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://${mesh_package}/meshes/gripper1.STL" />
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+  
+  <!-- ============ Gripper1 Joint ============ -->
+  <xacro:macro name="gripper1_joint" params="prefix:='' lower:='-1.1' upper:='1.1'">
+    <joint name="${prefix}gripper1_joint" type="revolute">
+      <origin xyz="0 0.068 -0.02" rpy="3.1416 -1.2227 1.5708" />
+      <parent link="${prefix}wrist" />
+      <child link="${prefix}gripper1" />
+      <axis xyz="0 -1 0" />
+      <limit lower="${lower}" upper="${upper}" effort="${default_effort}" velocity="${default_velocity}" />
+      <dynamics damping="${default_damping}" friction="${default_friction}" />
+      <safety_controller
+        soft_upper_limit="2"
+        soft_lower_limit="-1"
+        k_position="${safety_k_position}"
+        k_velocity="${safety_k_velocity}" />
+    </joint>
+  </xacro:macro>
+  
+  <!-- ============ Gripper2 ============ -->
+  <xacro:macro name="gripper2_link" params="prefix:=''">
+    <link name="${prefix}gripper2">
+      <inertial>
+        <origin xyz="-0.0121000181512973 8.32667268468867E-17 0.0328269389844376" rpy="0 0 0" />
+        <mass value="0.024535444434625" />
+        <inertia
+          ixx="1.18614897633984E-05"
+          ixy="-1.93229391092387E-21"
+          ixz="-9.21066216267173E-07"
+          iyy="1.25340108198844E-05"
+          iyz="-1.01643953670516E-20"
+          izz="2.30821735212762E-06" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://${mesh_package}/meshes/gripper2.STL" />
+        </geometry>
+        <material name="${prefix}white">
+          <color rgba="${default_color}" />
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://${mesh_package}/meshes/gripper2.STL" />
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+  
+  <!-- ============ Gripper2 Joint ============ -->
+  <xacro:macro name="gripper2_joint" params="prefix:='' lower:='-1.1' upper:='1.1'">
+    <joint name="${prefix}gripper2_joint" type="revolute">
+      <origin xyz="0 0.068 0.02" rpy="0 1.4498 1.5708" />
+      <parent link="${prefix}wrist" />
+      <child link="${prefix}gripper2" />
+      <axis xyz="0 1 0" />
+      <limit lower="${lower}" upper="${upper}" effort="${default_effort}" velocity="${default_velocity}" />
+      <dynamics damping="${default_damping}" friction="${default_friction}" />
+      <safety_controller
+        soft_upper_limit="2"
+        soft_lower_limit="-1"
+        k_position="${safety_k_position}"
+        k_velocity="${safety_k_velocity}" />
+    </joint>
+  </xacro:macro>
+  
+  <!-- ============ Complete Arm Assembly ============ -->
+  <xacro:macro name="ros2_sim_arm" params="prefix:='' 
+                                           boom_lower:='-0.8' boom_upper:='1.5'
+                                           stick_lower:='-1.1' stick_upper:='1.9'
+                                           wrist_lower:='-1.5' wrist_upper:='1.5'
+                                           gripper_lower:='-1.1' gripper_upper:='1.1'">
+    
+    <!-- Base parts -->
+    <xacro:base_link prefix="${prefix}" />
+    <xacro:base_link_secondary prefix="${prefix}" />
+    <xacro:base_joint prefix="${prefix}" />
+    
+    <!-- Boom -->
+    <xacro:boom_link prefix="${prefix}" />
+    <xacro:boom_joint prefix="${prefix}" lower="${boom_lower}" upper="${boom_upper}" />
+    
+    <!-- Stick -->
+    <xacro:stick_link prefix="${prefix}" />
+    <xacro:stick_joint prefix="${prefix}" lower="${stick_lower}" upper="${stick_upper}" />
+    
+    <!-- Wrist -->
+    <xacro:wrist_link prefix="${prefix}" />
+    <xacro:wrist_joint prefix="${prefix}" lower="${wrist_lower}" upper="${wrist_upper}" />
+    
+    <!-- Grippers -->
+    <xacro:gripper1_link prefix="${prefix}" />
+    <xacro:gripper1_joint prefix="${prefix}" lower="${gripper_lower}" upper="${gripper_upper}" />
+    
+    <xacro:gripper2_link prefix="${prefix}" />
+    <xacro:gripper2_joint prefix="${prefix}" lower="${gripper_lower}" upper="${gripper_upper}" />
+    
+  </xacro:macro>
+  
+  <!-- ============ Default Instantiation ============ -->
+  <!-- Uncomment to automatically create the arm when this file is included -->
+  <!--
+  <xacro:ros2_sim_arm />
+  -->
+
+</robot>

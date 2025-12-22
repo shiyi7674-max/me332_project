@@ -1,0 +1,10 @@
+planning_plugins:
+  - chomp_interface/CHOMPPlanner
+request_adapters:
+  - default_planner_request_adapters/AddTimeOptimalParameterization
+  - default_planner_request_adapters/FixStartPositionBounds
+  - default_planner_request_adapters/FixWorkspaceBounds
+  - default_planner_request_adapters/FixStartPositionCollision
+response_adapters:
+  - default_planner_request_adapters/AddTimeOptimalParameterization
+

@@ -1,0 +1,52 @@
+# This config file is used by ros2_control
+controller_manager:
+  ros__parameters:
+    update_rate: 200  # Hz
+
+    arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    gripper_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+arm_controller:
+  ros__parameters:
+    joints:
+      - arm_shoulder_pan_joint
+      - arm_shoulder_pitch_joint
+      - arm_elbow_pitch_joint
+      - arm_wrist_pitch_joint
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    open_loop_control: false
+    allow_partial_joints_goal: false
+    allow_nonzero_velocity_at_trajectory_end: true # 允许终点速度非零（防止急停计算错误）
+    
+    # 增加约束容差，防止因为一点点时间误差就拒绝执行
+    constraints:
+      goal_time: 1.0
+      stopped_velocity_tolerance: 0.5
+      arm_shoulder_pan_joint: { trajectory: 0.2, goal: 0.1 }
+      arm_shoulder_pitch_joint: { trajectory: 0.2, goal: 0.1 }
+      arm_elbow_pitch_joint: { trajectory: 0.2, goal: 0.1 }
+      arm_wrist_pitch_joint: { trajectory: 0.2, goal: 0.1 }
+
+gripper_controller:
+  ros__parameters:
+    joints:
+      # --- 关键修改：只保留左指（主动关节） ---
+      # 如果右指是 mimic 关节，试图控制它会导致控制器加载失败
+      - gripper_left_joint
+      - gripper_right_joint 
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+
