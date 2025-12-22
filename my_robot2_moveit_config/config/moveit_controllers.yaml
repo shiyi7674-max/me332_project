@@ -1,0 +1,29 @@
+# 注意：这一行通常在 launch 文件里加载，但写在这里也可以，前提是参数加载方式正确
+moveit_controller_manager: moveit_simple_controller_manager/MoveItSimpleControllerManager
+
+moveit_simple_controller_manager:
+  controller_names:
+    - arm_controller
+    - gripper_controller
+
+  # --- 关键修改 1: 必须缩进，放在 moveit_simple_controller_manager 下面 ---
+  arm_controller:
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    default: true
+    # --- 关键修改 2: 关节名称必须与 ros_controllers.yaml 完全一致 ---
+    joints:
+      - arm_shoulder_pan_joint
+      - arm_shoulder_pitch_joint
+      - arm_elbow_pitch_joint
+      - arm_wrist_pitch_joint
+
+  # --- 关键修改 1: 必须缩进 ---
+  gripper_controller:
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    default: true
+    # --- 关键修改 2: 关节名称必须与 ros_controllers.yaml 完全一致 ---
+    joints:
+      - gripper_left_joint
+      - gripper_right_joint
