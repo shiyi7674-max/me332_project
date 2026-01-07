@@ -1,5 +1,0 @@
-<root main_tree_to_execute="MainTree">
-  <BehaviorTree ID="MainTree">
-    <!-- 默认导航行为树模板 -->
-  </BehaviorTree>
-</root>
